@@ -2,6 +2,7 @@
 
 import { ChapterProgress } from "./ChapterProgress";
 import { LogbookButton } from "./LogbookButton";
+import { SoundToggle } from "./SoundToggle";
 import type { ChapterData, GuestProgress } from "@/types";
 
 interface Props {
@@ -28,8 +29,9 @@ export function HUD({ roadmapTitle, chapters, progress, onLogbookOpen }: Props) 
         <ChapterProgress chapters={chapters} progress={progress} />
       </div>
 
-      {/* Right: logbook */}
-      <div className="pointer-events-auto">
+      {/* Right: sound + logbook */}
+      <div className="pointer-events-auto flex items-center gap-2">
+        <SoundToggle />
         <LogbookButton onClick={onLogbookOpen} />
       </div>
     </div>

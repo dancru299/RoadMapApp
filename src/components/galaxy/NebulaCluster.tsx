@@ -14,7 +14,7 @@ export function NebulaCluster({ chapter }: Props) {
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
 
-  const pad = 160;
+  const pad = 180;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
   const rx = (maxX - minX) / 2 + pad;
@@ -31,10 +31,30 @@ export function NebulaCluster({ chapter }: Props) {
         top: cy - ry,
         width: rx * 2,
         height: ry * 2,
-        background: `radial-gradient(ellipse at center, ${color}22 0%, ${color}0d 55%, transparent 75%)`,
-        borderRadius: "50%",
-        filter: "blur(24px)",
       }}
-    />
+    >
+      {/* Outer diffuse cloud */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse at center, ${color}33 0%, ${color}14 50%, transparent 72%)`,
+          borderRadius: "50%",
+          filter: "blur(40px)",
+        }}
+      />
+      {/* Brighter offset core for depth */}
+      <div
+        className="absolute"
+        style={{
+          left: "30%",
+          top: "28%",
+          width: "45%",
+          height: "45%",
+          background: `radial-gradient(circle at center, ${color}55 0%, transparent 70%)`,
+          borderRadius: "50%",
+          filter: "blur(36px)",
+        }}
+      />
+    </div>
   );
 }

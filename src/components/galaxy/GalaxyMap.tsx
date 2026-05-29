@@ -1,49 +1,28 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, type RefObject } from "react";
 import { useGalaxyMap } from "@/hooks/useGalaxyMap";
 import { NodeConnector } from "./NodeConnector";
 import { NebulaCluster } from "./NebulaCluster";
 import { StarNode } from "./StarNode";
-import type { ChapterData, NodeData, NodeStatus, NodeWithStatus, GuestProgress } from "@/types";
+import { computeStatusMap } from "@/lib/status";
+import type { ChapterData, NodeData, NodeWithStatus, GuestProgress } from "@/types";
 
 const WORLD_W = 1500;
 const WORLD_H = 1150;
-
-function computeStatusMap(
-  chapters: ChapterData[],
-  progress: GuestProgress["progress"]
-): Map<string, NodeStatus> {
-  const all = chapters
-    .flatMap((c) => c.nodes)
-    .sort((a, b) => a.orderIndex - b.orderIndex);
-
-  const map = new Map<string, NodeStatus>();
-
-  for (const node of all) {
-    if (progress[node.id]?.status === "completed") {
-      map.set(node.id, "completed");
-    } else if (!node.prerequisiteNodeId) {
-      map.set(node.id, "active");
-    } else {
-      const prereqStatus = map.get(node.prerequisiteNodeId);
-      map.set(node.id, prereqStatus === "completed" ? "active" : "locked");
-    }
-  }
-
-  return map;
-}
 
 interface Props {
   chapters: ChapterData[];
   progress: GuestProgress["progress"];
   onNodeClick: (node: NodeWithStatus) => void;
+  parallaxRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function GalaxyMap({ chapters, progress, onNodeClick }: Props) {
+export function GalaxyMap({ chapters, progress, onNodeClick, parallaxRef }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { offset, scale, setOffset, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onWheel } =
-    useGalaxyMap();
+  const worldRef = useRef<HTMLDivElement>(null);
+  const { onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onWheel, centerOn } =
+    useGalaxyMap(worldRef, parallaxRef);
 
   const allNodes = useMemo<NodeData[]>(
     () => chapters.flatMap((c) => c.nodes),
@@ -63,7 +42,7 @@ export function GalaxyMap({ chapters, progress, onNodeClick }: Props) {
     const firstActive = sorted.find((n) => statusMap.get(n.id) === "active");
     if (!firstActive) return;
     const { width, height } = vp.getBoundingClientRect();
-    setOffset({ x: width / 2 - firstActive.posX, y: height / 2 - firstActive.posY });
+    centerOn(firstActive.posX, firstActive.posY, width, height);
     // Only run once on mount — statusMap changes are intentionally ignored here
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -89,13 +68,15 @@ export function GalaxyMap({ chapters, progress, onNodeClick }: Props) {
       onMouseLeave={onMouseLeave}
       onWheel={onWheel}
     >
-      {/* World container */}
+      {/* World container — transform is driven imperatively by useGalaxyMap */}
       <div
+        ref={worldRef}
         className="absolute top-0 left-0 origin-top-left"
         style={{
           width: WORLD_W,
           height: WORLD_H,
-          transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+          transform: "translate3d(0px, 0px, 0) scale(1)",
+          willChange: "transform",
         }}
       >
         {/* Nebula cluster backgrounds */}
@@ -109,6 +90,15 @@ export function GalaxyMap({ chapters, progress, onNodeClick }: Props) {
           width={WORLD_W}
           height={WORLD_H}
         >
+          <defs>
+            <filter id="connector-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           {connections.map(({ from, to }) => (
             <NodeConnector
               key={`${from.id}-${to.id}`}
