@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String
+  createdAt DateTime @default(now())
+
+  progress UserProgress[]
+
+  @@map("users")
+}
+
+model Roadmap {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  chapters Chapter[]
+  nodes    Node[]
+
+  @@map("roadmaps")
+}
+
+model Chapter {
+  id          String @id @default(uuid())
+  roadmapId   String
+  title       String
+  orderIndex  Int
+  nebulaColor String @default("#7c3aed")
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  nodes   Node[]
+
+  @@map("chapters")
+}
+
+model Node {
+  id                 String  @id @default(uuid())
+  roadmapId          String
+  chapterId          String
+  title              String
+  orderIndex         Int
+  posX               Float
+  posY               Float
+  prerequisiteNodeId String?
+
+  roadmap      Roadmap        @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  chapter      Chapter        @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  prerequisite Node?          @relation("NodePrerequisite", fields: [prerequisiteNodeId], references: [id])
+  dependents   Node[]         @relation("NodePrerequisite")
+  mission      Mission?
+  progress     UserProgress[]
+
+  @@map("nodes")
+}
+
+model Mission {
+  id                String  @id @default(uuid())
+  nodeId            String  @unique
+  description       String
+  initialCode       String?
+  solutionHint      String?
+  validationPattern String?
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@map("missions")
+}
+
+model UserProgress {
+  id             String    @id @default(uuid())
+  userId         String
+  nodeId         String
+  chapterId      String
+  status         String    @default("locked")
+  selfConfidence String?
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nodeId])
+  @@map("user_progress")
+}
